@@ -28,7 +28,7 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             clean build
 
-      - name: Run tests when test targets exist
+      - name: Run tests and report coverage when test targets exist
         run: |
           HAS_TEST_TARGETS=$(xcodebuild -list -json -project PriceSnap.xcodeproj | python3 -c "import json,sys; d=json.load(sys.stdin); t=d.get('project',{}).get('targets',[]); print('true' if any(x.endswith('Tests') for x in t) else 'false')")
 
@@ -37,7 +37,16 @@ jobs:
               -project PriceSnap.xcodeproj \
               -scheme PriceSnap \
               -destination 'platform=iOS Simulator,name=iPhone 16' \
+              -enableCodeCoverage YES \
+              -resultBundlePath TestResults.xcresult \
               test
+
+            COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; r=json.load(sys.stdin); print(f'{(r.get(\"lineCoverage\",0)*100):.2f}')")
+            echo "Code coverage: ${COVERAGE}%"
+            echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Total line coverage: ${COVERAGE}%" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No test targets found. Build check completed successfully."
+            echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "- No test targets found, coverage not available." >> "$GITHUB_STEP_SUMMARY"
           fi

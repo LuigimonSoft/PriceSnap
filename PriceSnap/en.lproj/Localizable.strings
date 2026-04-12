@@ -1,0 +1,40 @@
+"app_title" = "Price Snap";
+"section_new_product" = "New product";
+"section_new_store" = "New store";
+"section_new_price" = "New price by store";
+"section_registered_products" = "Registered products";
+
+"field_name" = "Name";
+"field_barcode" = "Barcode";
+"field_image" = "Image (URL or resource)";
+"field_location" = "Location";
+"field_website" = "Website";
+"field_price" = "Price";
+
+"button_save_product" = "Save product";
+"button_save_store" = "Save store";
+"button_save_price" = "Save price";
+"button_ok" = "OK";
+
+"picker_product" = "Product";
+"picker_store" = "Store";
+"picker_select_product" = "Select product";
+"picker_select_store" = "Select store";
+
+"toggle_offer" = "On offer?";
+
+"empty_products" = "No products yet.";
+"empty_history" = "No price history";
+
+"label_barcode" = "Barcode";
+"metric_current" = "Current";
+"metric_previous" = "Previous";
+"metric_max" = "Max";
+"metric_min" = "Min";
+
+"alert_error_title" = "Error";
+"error_unknown" = "Unknown error";
+"error_invalid_name" = "Name cannot be empty.";
+"error_invalid_barcode" = "Barcode cannot be empty.";
+"error_invalid_price" = "Price must be greater than zero.";
+"error_invalid_selection" = "Select product, store, and a valid price.";

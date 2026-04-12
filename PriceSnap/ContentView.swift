@@ -5,121 +5,136 @@
 //  Created by Luis Carlos Carrillo Tovar on 2025-05-01.
 //
 
+import SwiftData
 import SwiftUI
 
 struct ContentView: View {
-    
-    let products: [Product] = [
-        Product(name: "Test Product", actualPrice: 10.0, previousPrice: 12.0, maxPrice: 15.0, minPrice: 8.0, barcode: "1234567890123", image: "test_image", storeid: UUID(), previousPriceDate: Date(), previosPriceStoreId: UUID(), maxPriceDate: Date(), minPriceDate: Date(), maxPriceStoreId: UUID(), minPriceStoreId: UUID()),
-        Product(name: "Another Product", actualPrice: 20.0, previousPrice: 22.0, maxPrice: 25.0, minPrice: 18.0, barcode: "1234567890124", image: "test_image", storeid: UUID(), previousPriceDate: Date(), previosPriceStoreId: UUID(), maxPriceDate: Date(), minPriceDate: Date(), maxPriceStoreId: UUID(), minPriceStoreId: UUID()),
-    ]
-    
-    let stores: [Store] = [
-        Store(name: "Walmart", location: "Canada", link: "https://store1.com", image: "https://brandcenter.walmart.com/content/dam/brand/flower-icon.svg", description: "Description of Store 1"),
-        Store(name: "Store 2", location: "Location 2", link: "https://store2.com", image: "store_image", description: "Description of Store 2"),
-    ]
-    
-    
-    
-    @ViewBuilder
-    func productView(product: Product, prices: [PriceFoundByStore]) -> some View {
-        VStack {
-            HStack {
-                Text(product.name)
-                    .font(.headline)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .frame(width: 150, alignment: .leading)
-                Spacer()
-                HStack {
-                    
-                    Text("$\(product.actualPrice, specifier: "%.2f")")
-                        .font(.subheadline)
-                        .frame(width: 50, alignment: .trailing)
-                    Text("$\(product.previousPrice, specifier: "%.2f")")
-                        .font(.subheadline)
-                        .frame(width: 50, alignment: .trailing)
-                }
-                Spacer()
-                HStack {
-                    Text("$\(product.maxPrice, specifier: "%.2f")")
-                        .font(.caption)
-                        .frame(width: 45, alignment: .trailing)
-                    Text("$\(product.minPrice, specifier: "%.2f")")
-                        .font(.caption)
-                        .frame(width: 45, alignment: .trailing)
-                }
-                
-            }
-            VStack {
-                List {
-                    ForEach(prices) { price in
-                        storeView(price: price)
-                            
-                    }
-                    
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    func storeView(price: PriceFoundByStore) -> some View {
-        HStack {
-            Text("Price: \(price.price, specifier: "%.2f") at Store ID: \(price.storeId) on \(price.date.formatted())")
-                .font(.caption)
-                .foregroundColor(.gray)
-                .padding(.leading, 20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-    
+    @Environment(\.modelContext) private var modelContext
+    @StateObject private var viewModel = ContentViewModel()
+
     var body: some View {
-        
-        var pricesFound: [PriceFoundByStore] = [
-            PriceFoundByStore(productId: products[0].id, storeId: stores[0].id, price: 10.0, date: Date()),
-            PriceFoundByStore(productId: products[0].id, storeId: stores[1].id, price: 15.0, date: Date()),
-            PriceFoundByStore(productId: products[1].id, storeId: stores[0].id, price: 20.0, date: Date()),
-            PriceFoundByStore(productId: products[1].id, storeId: stores[1].id, price: 24.0, date: Date())
-        ]
-        
-        VStack{
-            Text("Price Snap")
-                .font(.largeTitle)
-            HStack {
-                Text("Product")
-                    .font(.headline)
-                    .frame(width: 150, alignment: .leading)
-                Spacer()
-                Text("🔁")
-                    .font(.headline)
-                    .frame(width: 50, alignment: .center)
-                Text("🕒")
-                    .font(.headline)
-                    .frame(width: 50, alignment: .center)
-                Spacer()
-                Text("Max")
-                    .font(.headline)
-                    .frame(width: 45, alignment: .center)
-                Text("Min")
-                    .font(.headline)
-                    .frame(width: 45, alignment: .center)
-                    
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 5)
-            List{
-                ForEach(products) { product in
-                    productView(product: product, prices: pricesFound.filter { $0.productId == product.id })
-                        
+        NavigationStack {
+            Form {
+                Section(localized("section_new_product")) {
+                    TextField(localized("field_name"), text: $viewModel.newProductName)
+                    TextField(localized("field_barcode"), text: $viewModel.newProductBarcode)
+                    TextField(localized("field_image"), text: $viewModel.newProductImage)
+
+                    Button(localized("button_save_product")) {
+                        viewModel.addProduct()
+                    }
                 }
-                
+
+                Section(localized("section_new_store")) {
+                    TextField(localized("field_name"), text: $viewModel.newStoreName)
+                    TextField(localized("field_location"), text: $viewModel.newStoreLocation)
+                    TextField(localized("field_website"), text: $viewModel.newStoreLink)
+
+                    Button(localized("button_save_store")) {
+                        viewModel.addStore()
+                    }
+                }
+
+                Section(localized("section_new_price")) {
+                    Picker(localized("picker_product"), selection: $viewModel.selectedProductIndex) {
+                        Text(localized("picker_select_product")).tag(nil as Int?)
+                        ForEach(Array(viewModel.products.enumerated()), id: \.element.persistentModelID) { index, product in
+                            Text(product.name).tag(Optional(index))
+                        }
+                    }
+
+                    Picker(localized("picker_store"), selection: $viewModel.selectedStoreIndex) {
+                        Text(localized("picker_select_store")).tag(nil as Int?)
+                        ForEach(Array(viewModel.stores.enumerated()), id: \.element.persistentModelID) { index, store in
+                            Text(store.name).tag(Optional(index))
+                        }
+                    }
+
+                    TextField(localized("field_price"), text: $viewModel.newPrice)
+                        .keyboardType(.decimalPad)
+                    Toggle(localized("toggle_offer"), isOn: $viewModel.isOnOffer)
+
+                    Button(localized("button_save_price")) {
+                        viewModel.addPrice()
+                    }
+                }
+
+                Section(localized("section_registered_products")) {
+                    if viewModel.products.isEmpty {
+                        Text(localized("empty_products"))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(viewModel.products) { product in
+                            let summary = viewModel.summary(for: product)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(product.name)
+                                    .font(.headline)
+                                Text("\(localized("label_barcode")): \(product.barcode)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                HStack {
+                                    metricChip(title: localized("metric_current"), value: summary.actualPrice)
+                                    metricChip(title: localized("metric_previous"), value: summary.previousPrice)
+                                    metricChip(title: localized("metric_max"), value: summary.maxPrice)
+                                    metricChip(title: localized("metric_min"), value: summary.minPrice)
+                                }
+
+                                if summary.sortedHistory.isEmpty {
+                                    Text(localized("empty_history"))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    ForEach(summary.sortedHistory) { priceEntry in
+                                        Text("$\(priceEntry.price, specifier: "%.2f") • \(priceEntry.store.name) • \(priceEntry.date.formatted(date: .abbreviated, time: .shortened))")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
             }
-            .listStyle(.plain)
+            .navigationTitle(localized("app_title"))
+            .onAppear {
+                viewModel.configure(with: modelContext)
+            }
+            .alert(localized("alert_error_title"), isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        viewModel.errorMessage = nil
+                    }
+                }
+            )) {
+                Button(localized("button_ok"), role: .cancel) {}
+            } message: {
+                Text(viewModel.errorMessage ?? localized("error_unknown"))
+            }
         }
+    }
+
+    @ViewBuilder
+    private func metricChip(title: String, value: Double?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value.map { "$\($0, specifier: "%.2f")" } ?? "—")
+                .font(.caption)
+                .bold()
+        }
+    }
+
+    private func localized(_ key: String) -> String {
+        NSLocalizedString(key, comment: "")
     }
 }
 
 #Preview {
     ContentView()
+        .modelContainer(for: [Product.self, Store.self, PriceFoundByStore.self], inMemory: true)
 }

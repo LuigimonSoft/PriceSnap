@@ -1,0 +1,52 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build app
+        run: |
+          xcodebuild \
+            -project PriceSnap.xcodeproj \
+            -scheme PriceSnap \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            clean build
+
+      - name: Run tests and report coverage when test targets exist
+        run: |
+          HAS_TEST_TARGETS=$(xcodebuild -list -json -project PriceSnap.xcodeproj | python3 -c "import json,sys; d=json.load(sys.stdin); t=d.get('project',{}).get('targets',[]); print('true' if any(x.endswith('Tests') for x in t) else 'false')")
+
+          if [ "$HAS_TEST_TARGETS" = "true" ]; then
+            xcodebuild \
+              -project PriceSnap.xcodeproj \
+              -scheme PriceSnap \
+              -destination 'platform=iOS Simulator,name=iPhone 16' \
+              -enableCodeCoverage YES \
+              -resultBundlePath TestResults.xcresult \
+              test
+
+            COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; r=json.load(sys.stdin); print(f'{(r.get(\"lineCoverage\",0)*100):.2f}')")
+            echo "Code coverage: ${COVERAGE}%"
+            echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Total line coverage: ${COVERAGE}%" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No test targets found. Build check completed successfully."
+            echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "- No test targets found, coverage not available." >> "$GITHUB_STEP_SUMMARY"
+          fi

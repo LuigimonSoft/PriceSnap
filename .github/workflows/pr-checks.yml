@@ -20,12 +20,47 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Resolve available iOS simulator
+        run: |
+          SIMULATOR_UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+
+          devices = json.load(sys.stdin).get('devices', {})
+          candidates = []
+          for runtime, items in devices.items():
+              if 'iOS' not in runtime:
+                  continue
+              for item in items:
+                  if not item.get('isAvailable'):
+                      continue
+                  name = item.get('name', '')
+                  if not name.startswith('iPhone'):
+                      continue
+                  candidates.append((runtime, name, item.get('udid', '')))
+
+          if not candidates:
+              raise SystemExit('No available iPhone simulators found')
+
+          def sort_key(entry):
+              runtime, name, _ = entry
+              version = runtime.rsplit('.', 1)[-1].replace('-', '.')
+              parts = []
+              for token in version.split('.'):
+                  parts.append(int(token) if token.isdigit() else 0)
+              return (parts, name)
+
+          print(sorted(candidates, key=sort_key, reverse=True)[0][2])
+          ")
+
+          echo "Using simulator UDID: ${SIMULATOR_UDID}"
+          echo "IOS_SIMULATOR_DESTINATION=id=${SIMULATOR_UDID}" >> "$GITHUB_ENV"
+
       - name: Build app
         run: |
           xcodebuild \
             -project PriceSnap.xcodeproj \
             -scheme PriceSnap \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'generic/platform=iOS Simulator' \
             clean build
 
       - name: Run tests and report coverage when test targets exist
@@ -36,15 +71,15 @@ jobs:
             xcodebuild \
               -project PriceSnap.xcodeproj \
               -scheme PriceSnap \
-              -destination 'platform=iOS Simulator,name=iPhone 16' \
+              -destination "$IOS_SIMULATOR_DESTINATION" \
               -enableCodeCoverage YES \
               -resultBundlePath TestResults.xcresult \
               test
 
-            COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; r=json.load(sys.stdin); print(f'{(r.get(\"lineCoverage\",0)*100):.2f}')")
+            COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; r=json.load(sys.stdin); targets=r.get('targets', []); app_target=next((t for t in targets if t.get('name') == 'PriceSnap.app'), None); value=(app_target or r).get('lineCoverage', 0); print(f'{(value*100):.2f}')")
             echo "Code coverage: ${COVERAGE}%"
             echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"
-            echo "- Total line coverage: ${COVERAGE}%" >> "$GITHUB_STEP_SUMMARY"
+            echo "- PriceSnap.app line coverage: ${COVERAGE}%" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No test targets found. Build check completed successfully."
             echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"

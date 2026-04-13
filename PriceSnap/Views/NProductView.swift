@@ -9,73 +9,36 @@ import SwiftUI
 
 struct NProductView: View {
     var product: Product
-    var pricesFound: [PriceFoundByStore] = []
-    
-    var body: some View {
-        productView(product: product, prices: pricesFound.filter { $0.productId == product.id })
-    }
-}
 
-@ViewBuilder
-func productView(product: Product, prices: [PriceFoundByStore]) -> some View {
-    VStack {
-        HStack {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
             Text(product.name)
                 .font(.headline)
-                .multilineTextAlignment(.leading)
-                .lineLimit(2)
-                .frame(width: 150, alignment: .leading)
-            Spacer()
-            HStack {
-                
-                Text("$\(product.actualPrice, specifier: "%.2f")")
-                    .font(.subheadline)
-                    .frame(width: 50, alignment: .trailing)
-                Text("$\(product.previousPrice, specifier: "%.2f")")
-                    .font(.subheadline)
-                    .frame(width: 50, alignment: .trailing)
-            }
-            Spacer()
-            HStack {
-                Text("$\(product.maxPrice, specifier: "%.2f")")
+
+            Text("\(localized("label_barcode")): \(product.barcode)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if product.prices.isEmpty {
+                Text(localized("empty_history"))
                     .font(.caption)
-                    .frame(width: 45, alignment: .trailing)
-                Text("$\(product.minPrice, specifier: "%.2f")")
-                    .font(.caption)
-                    .frame(width: 45, alignment: .trailing)
-            }
-            
-        }
-        VStack {
-            List {
-                ForEach(prices) { price in
-                    //storeView(price: price)
-                        
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(product.prices.sorted(by: { $0.date > $1.date })) { price in
+                    Text("$\(price.price, specifier: "%.2f") • \(price.store.name)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
-                
             }
         }
+    }
+
+    private func localized(_ key: String) -> String {
+        NSLocalizedString(key, comment: "")
     }
 }
 
 #Preview {
-    NProductView(
-        product: Product(
-            name: "Product Name",
-            actualPrice: 100.0,
-            previousPrice: 120.0,
-            maxPrice: 150.0,
-            minPrice: 90.0,
-            barcode: "123456789",
-            image: "product_image",
-            storeid: UUID(),
-            previousPriceDate: Date(),
-            previosPriceStoreId: UUID(),
-            maxPriceDate: Date(),
-            minPriceDate: Date(),
-            maxPriceStoreId: UUID(),
-            minPriceStoreId: UUID()
-        ),
-        pricesFound: []
-    )
+    NProductView(product: Product(name: "Sample product", barcode: "0000000000000"))
+        .modelContainer(for: [Product.self, Store.self, PriceFoundByStore.self], inMemory: true)
 }

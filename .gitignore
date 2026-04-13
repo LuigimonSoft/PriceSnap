@@ -4,6 +4,10 @@
 
 ## User settings
 xcuserdata/
+DerivedData/
+*.xcresult
+*.xcworkspace/xcuserdata/
+*.xcuserstate
 
 ## Obj-C/Swift specific
 *.hmap

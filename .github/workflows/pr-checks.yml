@@ -76,10 +76,10 @@ jobs:
               -resultBundlePath TestResults.xcresult \
               test
 
-            COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; r=json.load(sys.stdin); print(f'{(r.get(\"lineCoverage\",0)*100):.2f}')")
+            COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; r=json.load(sys.stdin); targets=r.get('targets', []); app_target=next((t for t in targets if t.get('name') == 'PriceSnap.app'), None); value=(app_target or r).get('lineCoverage', 0); print(f'{(value*100):.2f}')")
             echo "Code coverage: ${COVERAGE}%"
             echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"
-            echo "- Total line coverage: ${COVERAGE}%" >> "$GITHUB_STEP_SUMMARY"
+            echo "- PriceSnap.app line coverage: ${COVERAGE}%" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No test targets found. Build check completed successfully."
             echo "### Code Coverage" >> "$GITHUB_STEP_SUMMARY"
